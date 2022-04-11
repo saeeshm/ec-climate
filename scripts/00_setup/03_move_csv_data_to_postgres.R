@@ -24,7 +24,7 @@ library(rjson)
 creds <- fromJSON(file = 'scripts/credentials.json')
 
 # Setting default schema unless pre-specified
-if (is.null(creds$schema)) creds$schema <- 'precip'
+if (is.null(creds$schema)) creds$schema <- 'ec-climate'
 
 # Opening connection to postgres database
 conn <- dbConnect(drv = RPostgres::Postgres(), 
@@ -82,8 +82,10 @@ for (i in 1:nrow(type_table)){
 }
 
 # Formatting query
-query <- paste0('CREATE TABLE ', creds$schema, '.daily(', str, ')')
-# Dropping if exists
+query <- paste0('create table ', creds$schema, '.daily(', str, ')')
+# Creating schema if it doesn't exist
+dbExecute(conn, paste0('create schema if not exists ', creds$schema))
+# Dropping if exists, or creating if not
 dbExecute(conn, paste0('drop table if exists ', creds$schema, '.daily'))
 # Creating table in database
 dbExecute(conn, query)
@@ -139,4 +141,5 @@ dbExecute(conn, paste0('drop table if exists ', creds$schema, '.hourly'))
 dbExecute(conn, query)
 
 # ==== Calling the bat file that copies the data to postgres ====
-system('E:/saeeshProjects/ec-precipitation/scripts/00_setup/create_postgres_dbase.bat')
+path <- 'E:/saeeshProjects/ec-climate-database/scripts/00_setup'
+system(file.path(path, 'copy_data_to_postgres_dbase.bat'))

@@ -9,6 +9,10 @@ library(purrr)
 library(readr)
 library(stringr)
 library(dplyr)
+library(data.table)
+
+# Path to base data
+base_data_path <- 'output/base_historical_data'
 
 # ==== Cleaning names and rewriting ====
 
@@ -17,7 +21,7 @@ fnames <- list.files(file.path(base_data_path, 'daily'), full.names = T)
 walk(fnames, ~{
   print(.x)
   # Reading
-  dat <- read_csv(.x, col_types = cols(.default = "c"))
+  dat <- fread(.x, colClasses = 'character')
   # Cleaning names
   names <- names(dat) %>% 
     str_remove_all(., '\\(.*\\)') %>% 
@@ -25,13 +29,12 @@ walk(fnames, ~{
     str_trim(.) %>% 
     str_replace_all(., ' ', '_') %>% 
     tolower(.)
-  print(names)
   # Resetting names
-  names(dat) <- names
+  setnames(dat, names(dat), names)
   # Resetting variable order
   dat <- dat %>% select(sort(tidyselect::peek_vars()))
   # writing back to disk
-  write_csv(dat, .x)
+  fwrite(dat, .x)
 })
 
 # Cleaning names in the hourly files
@@ -39,7 +42,7 @@ fnames <- list.files(file.path(base_data_path, 'hourly'), full.names = T)
 walk(fnames, ~{
   print(.x)
   # Reading
-  dat <- read_csv(.x, col_types = cols(.default = "c"))
+  dat <- fread(.x, colClasses = 'character')
   # Cleaning names
   names <- names(dat) %>% 
     str_remove_all(., '\\(.*\\)') %>% 
@@ -47,11 +50,10 @@ walk(fnames, ~{
     str_trim(.) %>% 
     str_replace_all(., ' ', '_') %>% 
     tolower(.)
-  print(names)
   # Resetting names
-  names(dat) <- names
+  setnames(dat, names(dat), names)
   # Resetting variable order
   dat <- dat %>% select(sort(tidyselect::peek_vars()))
   # writing back to disk
-  write_csv(dat, .x)
+  fwrite(dat, .x)
 })
