@@ -5,6 +5,7 @@
 # station csvs
 
 # ==== Loading libraries ====
+library(dplyr)
 library(purrr)
 library(stringr)
 library(readr)
@@ -29,6 +30,9 @@ dnames <- list.files(paste0(download_path, '/'), full.names = T) %>%
 fnames <- map(dnames, ~{
   list.files(paste0(.x, '/daily'), full.names = T)
 })
+
+# Removing stations where there is no daily data
+fnames <- fnames[map_lgl(fnames, ~{length(.x) > 0})]
 
 # Naming each filename with its year
 fnames <- map(fnames, ~{
@@ -87,6 +91,9 @@ for (i in 1:length(thresholds)) {
     .x[year_names >= thresholds[i+1] & year_names < thresholds[i]]
   })
   
+  # Removing stations where there is no hourly data in this year-range
+  curr_fnames <- curr_fnames[map_lgl(curr_fnames, ~{length(.x) > 0})]
+  
   # Reading data for all stations within this data range
   daily_tables <- map_depth(curr_fnames, 2,  ~{
     read_csv(.x, col_types = cols(.default = "c"))
@@ -130,6 +137,9 @@ rm(list = ls()[!ls() %in% c('download_path', 'out_path', 'dnames')])
 fnames <- map(dnames, ~{
   list.files(paste0(.x, '/hourly'), full.names = T)
 })
+
+# Removing stations where there is no hourly data
+fnames <- fnames[map_lgl(fnames, ~{length(.x) > 0})]
 
 # Naming each filename with its year
 fnames <- map(fnames, ~{
@@ -187,6 +197,9 @@ for (i in 1:length(thresholds)) {
     .x[year_names >= thresholds[i+1] & year_names < thresholds[i]]
   })
   
+  # Removing stations where there is no hourly data in this year-range
+  curr_fnames <- curr_fnames[map_lgl(curr_fnames, ~{length(.x) > 0})]
+  
   # Reading data for all stations within this data range
   hourly_tables <- map_depth(curr_fnames, 2,  ~{
     suppressWarnings(read_csv(.x, col_types = cols(.default = "c")))
@@ -208,6 +221,8 @@ for (i in 1:length(thresholds)) {
     mutate(DateTime = ymd_hm(`Date/Time (LST)`)) %>% 
     select(-`Date/Time (LST)`) %>% 
     mutate(across(matches('Spd'), ~ {str_remove_all(.x, '[^\\d]*')})) %>%
+    mutate(Hmdx = as.numeric(Hmdx)) %>% 
+    mutate(`Dew Point Temp (°C)` = as.numeric(`Dew Point Temp (°C)`)) %>% 
     select(sort(tidyselect::peek_vars()))
   
   # Writing to csv, indicating the date-range covered

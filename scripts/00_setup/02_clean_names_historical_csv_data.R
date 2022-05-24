@@ -22,6 +22,8 @@ walk(fnames, ~{
   print(.x)
   # Reading
   dat <- fread(.x, colClasses = 'character')
+  # Replacing all missing strings with NAs
+  test %>% mutate(across(everything(), ~{ifelse(.x == '', NA, .x)}))
   # Cleaning names
   names <- names(dat) %>% 
     str_remove_all(., '\\(.*\\)') %>% 
@@ -34,7 +36,7 @@ walk(fnames, ~{
   # Resetting variable order
   dat <- dat %>% select(sort(tidyselect::peek_vars()))
   # writing back to disk
-  fwrite(dat, .x)
+  fwrite(dat, .x, na = NA)
 })
 
 # Cleaning names in the hourly files
@@ -55,5 +57,5 @@ walk(fnames, ~{
   # Resetting variable order
   dat <- dat %>% select(sort(tidyselect::peek_vars()))
   # writing back to disk
-  fwrite(dat, .x)
+  fwrite(dat, .x, na = NA)
 })

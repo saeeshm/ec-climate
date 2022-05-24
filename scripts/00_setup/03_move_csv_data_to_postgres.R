@@ -16,6 +16,7 @@ library(readr)
 library(tibble)
 library(stringr)
 library(dplyr)
+library(data.table)
 library(rjson)
 
 # ==== Initializing variables ====
@@ -23,17 +24,16 @@ library(rjson)
 # Reading creditials specified by user
 creds <- fromJSON(file = 'scripts/credentials.json')
 
-# Setting default schema unless pre-specified
-if (is.null(creds$schema)) creds$schema <- 'ec-climate'
-
 # Opening connection to postgres database
 conn <- dbConnect(drv = RPostgres::Postgres(), 
                   host = creds$host, dbname = creds$dbname, 
                   user = creds$user, password = creds$password)
 
+# Creating schema if it doesn't exist
+dbExecute(conn, paste0('create schema if not exists ', creds$schema))
 
 # Path to base historical data
-base_data_path <- 'data/base_download'
+base_data_path <- 'output/base_historical_data'
 
 # ==== Creating database containers ====
 
@@ -83,8 +83,6 @@ for (i in 1:nrow(type_table)){
 
 # Formatting query
 query <- paste0('create table ', creds$schema, '.daily(', str, ')')
-# Creating schema if it doesn't exist
-dbExecute(conn, paste0('create schema if not exists ', creds$schema))
 # Dropping if exists, or creating if not
 dbExecute(conn, paste0('drop table if exists ', creds$schema, '.daily'))
 # Creating table in database
@@ -140,6 +138,38 @@ dbExecute(conn, paste0('drop table if exists ', creds$schema, '.hourly'))
 # Creating table in database
 dbExecute(conn, query)
 
-# ==== Calling the bat file that copies the data to postgres ====
-path <- 'E:/saeeshProjects/ec-climate-database/scripts/00_setup'
-system(file.path(path, 'copy_data_to_postgres_dbase.bat'))
+# ==== Copying data to postgres ====
+
+# Daily
+fnames <- list.files(file.path(base_data_path, 'daily'), full.names = T)
+walk(fnames, ~{
+  print(.x)
+  # Reading data with the correct type specification
+  dat <- read_csv(.x, col_types = 'cdccDidccdcdddcdcdcidcdccdcdcdci')
+  # Adding to database
+  dbWriteTable(conn, 
+               DBI::Id(schema = creds$schema, table = "daily"), 
+               dat,
+               append = T, 
+               overwrite = F)
+  # Removing to restart
+  rm(dat)
+  gc()
+})
+
+# Hourly
+fnames <- list.files(file.path(base_data_path, 'hourly'), full.names = T)
+walk(fnames, ~{
+  print(.x)
+  # Reading data with the correct type specification
+  dat <- read_csv(.x, col_types = 'cTidccdcddidccdcdctdccdcdcdci')
+  # Adding to database
+  dbWriteTable(conn, 
+               DBI::Id(schema = creds$schema, table = "hourly"), 
+               dat,
+               append = T, 
+               overwrite = F)
+  # Removing to restart
+  rm(dat)
+  gc()
+})
