@@ -15,6 +15,7 @@ library(RPostgres)
 library(readr)
 library(tibble)
 library(stringr)
+library(purrr)
 library(dplyr)
 library(data.table)
 library(rjson)
@@ -22,18 +23,15 @@ library(rjson)
 # ==== Initializing variables ====
 
 # Reading creditials specified by user
-creds <- fromJSON(file = 'scripts/credentials.json')
+creds <- fromJSON(file = 'credentials.json')
 
 # Opening connection to postgres database
 conn <- dbConnect(drv = RPostgres::Postgres(), 
                   host = creds$host, dbname = creds$dbname, 
                   user = creds$user, password = creds$password)
 
-# Creating schema if it doesn't exist
-dbExecute(conn, paste0('create schema if not exists ', creds$schema))
-
 # Path to base historical data
-base_data_path <- 'output/base_historical_data'
+base_data_path <- 'data/base_download_formatted'
 
 # ==== Creating database containers ====
 
@@ -83,8 +81,6 @@ for (i in 1:nrow(type_table)){
 
 # Formatting query
 query <- paste0('create table ', creds$schema, '.daily(', str, ')')
-# Dropping if exists, or creating if not
-dbExecute(conn, paste0('drop table if exists ', creds$schema, '.daily'))
 # Creating table in database
 dbExecute(conn, query)
 
@@ -133,8 +129,6 @@ for (i in 1:nrow(type_table)){
 
 # Formatting query
 query <- paste0('CREATE TABLE ', creds$schema, '.hourly(', str, ')')
-# Dropping if exists
-dbExecute(conn, paste0('drop table if exists ', creds$schema, '.hourly'))
 # Creating table in database
 dbExecute(conn, query)
 

@@ -15,9 +15,15 @@ library(lubridate)
 
 # Path to downloaded data 
 download_path <- 'data/base_download'
+if (!dir.exists(download_path)) dir.create(download_path)
 
 # Path to output directory
-out_path <- 'output/base_historical_data'
+out_path <- 'data/base_download_formatted'
+if (!dir.exists(out_path)) dir.create(out_path)
+
+# Creating container directories if not present
+if(!dir.exists(file.path(out_path, 'daily'))) dir.create(file.path(out_path, 'daily'))
+if(!dir.exists(file.path(out_path, 'hourly'))) dir.create(file.path(out_path, 'hourly'))
 
 # Path to all station directories
 dnames <- list.files(paste0(download_path, '/'), full.names = T) %>% 

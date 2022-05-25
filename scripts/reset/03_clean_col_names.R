@@ -12,7 +12,7 @@ library(dplyr)
 library(data.table)
 
 # Path to base data
-base_data_path <- 'output/base_historical_data'
+base_data_path <- 'data/base_download_formatted'
 
 # ==== Cleaning names and rewriting ====
 
@@ -23,7 +23,7 @@ walk(fnames, ~{
   # Reading
   dat <- fread(.x, colClasses = 'character')
   # Replacing all missing strings with NAs
-  test %>% mutate(across(everything(), ~{ifelse(.x == '', NA, .x)}))
+  dat %>% mutate(across(everything(), ~{ifelse(.x == '', NA, .x)}))
   # Cleaning names
   names <- names(dat) %>% 
     str_remove_all(., '\\(.*\\)') %>% 
@@ -45,6 +45,8 @@ walk(fnames, ~{
   print(.x)
   # Reading
   dat <- fread(.x, colClasses = 'character')
+  # Replacing all missing strings with NAs
+  dat %>% mutate(across(everything(), ~{ifelse(.x == '', NA, .x)}))
   # Cleaning names
   names <- names(dat) %>% 
     str_remove_all(., '\\(.*\\)') %>% 

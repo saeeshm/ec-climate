@@ -20,7 +20,7 @@ library(DBI)
 download_path <- 'data/download'
 
 # Reading creditials specified by user
-creds <- fromJSON(file = 'scripts/credentials.json')
+creds <- fromJSON(file = 'credentials.json')
 
 # Opening connection to postgres database
 conn <- dbConnect(drv = RPostgres::Postgres(), 
@@ -43,7 +43,6 @@ dbWriteTable(conn,
              station_list,
              append = F,
              overwrite = T)
-
 # ==== Daily data ====
 
 # Getting filenames for all daily data for each station
@@ -54,7 +53,7 @@ fnames <- map(dnames, ~{
 # Removing stations where there is no new daily data
 fnames <- fnames[map_lgl(fnames, ~{length(.x) > 0})]
 
-# Reading all of them into 1 table
+# Reading all data tables
 daily_tables <- map_depth(fnames, 2,  ~{
   read_csv(.x, col_types = cols(.default = "c"))
 })
@@ -111,6 +110,11 @@ dbWriteTable(conn,
              update_data,
              append = T, 
              overwrite = F)
+
+# Cleaning
+rm(list = ls()[!ls() %in% c('conn', 'creds', 'dnames', 'download_path')])
+gc()
+
 # ==== Hourly ====
 
 # Getting filenames for all hourly data for each station
@@ -179,3 +183,6 @@ dbWriteTable(conn,
              update_data,
              append = T, 
              overwrite = F)
+
+# Closing connection
+dbDisconnect(conn)
