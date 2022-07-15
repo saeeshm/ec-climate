@@ -29,7 +29,7 @@ if (!dir.exists(archive_path)) dir.create(archive_path)
 # ==== Download parameters ====
 
 # Data start and end dates
-start_date <- '2021-09'
+start_date <- '2022-04'
 end_date <- substr(Sys.Date(), 1, 7)
 
 # Indexing vector for provinces

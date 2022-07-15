@@ -175,7 +175,10 @@ curr_data <- dbGetQuery(conn,
                                "'", dateRange[2], "'"))
 
 # Anti-joining to only get data not already present
-update_data <- anti_join(hourly, curr_data, by = c('climate_id', 'datetime'))
+update_data <- anti_join(hourly, 
+                         curr_data %>% 
+                           mutate(datetime = ymd_hms(paste(datetime, time))), 
+                         by = c('climate_id', 'datetime'))
 
 # Appending the update rows to the database
 dbWriteTable(conn, 

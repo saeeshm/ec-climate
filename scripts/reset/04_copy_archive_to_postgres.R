@@ -167,3 +167,19 @@ walk(fnames, ~{
   rm(dat)
   gc()
 })
+
+# ==== Clearing missing data ====
+
+# Due to how the data are stored by EC, the files all contain an additional
+# number of empty data rows for all the months of 2021, even though actual data
+# has only been recorded until September 2021. These extra rows need to be
+# dropped to ensure that complete data is updated on top of this script
+dbExecute(conn, paste0(
+  'delete from ', creds$schema, '.daily \n',
+  'where datetime > \'2021-08-31\' '
+))
+
+dbExecute(conn, paste0(
+  'delete from ', creds$schema, '.hourly \n',
+  'where year >= 2021 and month > 8 '
+))

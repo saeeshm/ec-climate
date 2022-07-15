@@ -26,6 +26,7 @@ print('Resetting EC Climate schema...')
 dbExecute(conn, paste0('drop table if exists ', creds$schema, '.daily'))
 dbExecute(conn, paste0('drop table if exists ', creds$schema, '.hourly'))
 dbExecute(conn, paste0('drop table if exists ', creds$schema, '.station_metadata'))
+dbExecute(conn, paste0('drop table if exists ', creds$schema, '.precip_representative_year'))
 dbExecute(conn, paste0('drop schema if exists ', creds$schema))
 # Creating schema and granting permissions
 dbExecute(conn, paste0('create schema ', creds$schema))

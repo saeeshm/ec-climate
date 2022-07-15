@@ -5,4 +5,5 @@
 *.Rproj
 data/
 archive/
+output/
 credentials.json
