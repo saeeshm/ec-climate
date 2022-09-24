@@ -12,11 +12,28 @@ library(lubridate)
 library(rjson)
 library(DBI)
 library(RPostgres)
+library(optparse)
+
+# ==== Initializing option parsing ====
+option_list <-  list(
+  make_option(c("-s", "--startdate"), type="character", default='2022-04', 
+              help="A year month combination indicating the start date for data download. Defaults to the date where the historical archive download ends [Default= %default]", 
+              metavar="character"),
+  make_option(c("-s", "--enddate"), type="character", default=substr(Sys.Date(), 1, 7), 
+              help="A year month combination indicating the start date for data download. Defaults to the current date [Default= %default]", 
+              metavar="character")
+  )
+
+# Parse any provided options and store them in a list
+opt_parser = OptionParser(option_list=option_list)
+opt = parse_args(opt_parser)
 
 # ==== User variables ====
 
 # Path to batch file for running download
-bat_path <- 'scripts/_temp_download_ec_climdata.bat'
+bat_path <- ifelse(.Platform$OS.type == 'unix', 
+                   'scripts/_temp_download_ec_climdata.sh',
+                   'scripts/_temp_download_ec_climdata.bat')
 
 # Path to folder that will store downloaded data
 download_path <- 'data/download'
@@ -29,8 +46,8 @@ if (!dir.exists(archive_path)) dir.create(archive_path)
 # ==== Download parameters ====
 
 # Data start and end dates
-start_date <- '2022-04'
-end_date <- substr(Sys.Date(), 1, 7)
+start_date <- opt$startdate
+end_date <- opt$enddate
 
 # Indexing vector for provinces
 provinces <- c('NL', 'PE', 'NS', 'NB', 'QC', 'ON', 'MB',
@@ -64,41 +81,72 @@ unlink(download_path, recursive = T)
 dir.create(download_path)
 
 # Creating batch file for calling the download script
-sink(bat_path)
-cat(':: Calling the activation script to run conda')
-cat('\n')
-cat('call C:\\Users\\OWNER\\miniconda3\\Scripts\\activate.bat')
-cat('\n')
-cat('\n')
-cat(':: Activating the GW environment')
-cat('\n')
-cat('call conda activate gwenv')
-cat('\n')
-cat('\n')
-cat(':: Navigating to the script home directory')
-cat('\n')
-cat('e:')
-cat('\n')
-cat(paste('cd', normalizePath(file.path(getwd(), 'scripts'))))
-cat('\n')
-cat('\n')
-cat(':: Calling the script to download weather data (hourly and daily) for all BC stations')
-cat('\n')
-cat(paste0('python get_canadian_weather_observations.py ', 
-           '--hourly --daily ',
-           ifelse(!is.null(start_date), paste0('--start-date "', start_date, '" '), ''),
-           ifelse(!is.null(end_date), paste0('--end-date "', end_date, '" '), ''),
-           # '--station-file "E:\\saeeshProjects\\ec-climate-database\\data\\station_list_CA.csv" ',
-           '-o "', normalizePath(download_path), '" ',
-           province
-           ))
-cat('\n')
-cat('\n')
-cat('pause')
-sink()
+if(.Platform$OS.type == 'unix'){
+  sink(bat_path)
+  cat('#!/bin/sh')
+  cat('\n')
+  cat('\n')
+  cat('# Activating conda environment')
+  cat('\n')
+  cat('source /Users/saeesh/opt/miniconda3/etc/profile.d/conda.sh')
+  cat('\n')
+  cat('conda activate gwenv')
+  cat('\n')
+  cat('\n')
+  cat('# Navigating to the script home directory')
+  cat('\n')
+  cat(paste('cd', normalizePath(file.path(getwd(), 'scripts'))))
+  cat('\n')
+  cat('\n')
+  cat('# Calling the script to download weather data (hourly and daily) for all BC stations')
+  cat('\n')
+  cat(paste0('python get_canadian_weather_observations.py ', 
+             '--hourly --daily ',
+             ifelse(!is.null(start_date), paste0('--start-date "', start_date, '" '), ''),
+             ifelse(!is.null(end_date), paste0('--end-date "', end_date, '" '), ''),
+             # '--station-file "E:\\saeeshProjects\\ec-climate-database\\data\\station_list_CA.csv" ',
+             '-o "', normalizePath(download_path), '" ',
+             province
+  ))
+  cat('\n')
+  cat('\n')
+  sink()
+}else{
+  sink(bat_path)
+  cat(':: Calling the activation script to run conda')
+  cat('\n')
+  cat('call C:\\Users\\OWNER\\miniconda3\\Scripts\\activate.bat')
+  cat('\n')
+  cat('\n')
+  cat(':: Activating the GW environment')
+  cat('\n')
+  cat('call conda activate gwenv')
+  cat('\n')
+  cat('\n')
+  cat(':: Navigating to the script home directory')
+  cat('\n')
+  cat('e:')
+  cat('\n')
+  cat(paste('cd', normalizePath(file.path(getwd(), 'scripts'))))
+  cat('\n')
+  cat('\n')
+  cat(':: Calling the script to download weather data (hourly and daily) for all BC stations')
+  cat('\n')
+  cat(paste0('python get_canadian_weather_observations.py ', 
+             '--hourly --daily ',
+             ifelse(!is.null(start_date), paste0('--start-date "', start_date, '" '), ''),
+             ifelse(!is.null(end_date), paste0('--end-date "', end_date, '" '), ''),
+             # '--station-file "E:\\saeeshProjects\\ec-climate-database\\data\\station_list_CA.csv" ',
+             '-o "', normalizePath(download_path), '" ',
+             province
+             ))
+  cat('\n')
+  cat('\n')
+  sink()
+}
 
 # ==== Executing the batch file ====
-system(normalizePath(bat_path))
+system(paste('sh', normalizePath(bat_path)))
 
 # ==== Adding download to the archive ====
 

@@ -28,9 +28,9 @@ conn <- dbConnect(drv = RPostgres::Postgres(),
                   user = creds$user, password = creds$password)
 
 # Path to all station directories
-dnames <- list.files(paste0(download_path, '/'), full.names = T) %>% 
+dnames <- list.files(download_path, full.names = T) %>% 
   # Naming them by station ID
-  setNames(list.files(paste0(download_path, '/')))
+  setNames(list.files(download_path))
 
 # ==== Station list ====
 
@@ -69,7 +69,7 @@ daily_joined <- imap(daily_joined, ~{
   .x <- mutate(.x, EC_Station_ID = .y)
 })
 
-# Joining all the data into a single dataframe for this year-range
+# Joining all the data into a single dataframe
 daily <- map_dfr(daily_joined, invisible) %>%
   mutate(DateTime = ymd(`Date/Time`)) %>% 
   select(-`Date/Time`) %>% 
@@ -102,7 +102,11 @@ curr_data <- dbGetQuery(conn,
                                "'", dateRange[2], "'"))
 
 # Anti-joining to only get data not already present
-update_data <- anti_join(daily, curr_data, by = c('climate_id', 'datetime'))
+if(nrow(curr_data) > 0){
+  update_data <- anti_join(daily, curr_data, by = c('climate_id', 'datetime'))
+}else{
+  update_data <- daily
+}
 
 # Appending the update rows to the database
 dbWriteTable(conn, 
@@ -175,10 +179,15 @@ curr_data <- dbGetQuery(conn,
                                "'", dateRange[2], "'"))
 
 # Anti-joining to only get data not already present
-update_data <- anti_join(hourly, 
-                         curr_data %>% 
-                           mutate(datetime = ymd_hms(paste(datetime, time))), 
-                         by = c('climate_id', 'datetime'))
+if(nrow(curr_data) > 0){
+  update_data <- anti_join(hourly, 
+                           curr_data %>% 
+                             mutate(datetime = ymd_hms(paste(datetime, time))), 
+                           by = c('climate_id', 'datetime'))
+}else{
+  update_data <- hourly
+}
+
 
 # Appending the update rows to the database
 dbWriteTable(conn, 
