@@ -13,15 +13,36 @@ library(lubridate)
 library(rjson)
 library(DBI)
 library(RPostgres)
+library(optparse)
+
+# ==== Initializing option parsing ====
+option_list <-  list(
+  make_option(c("-e", "--enddate"), type="character", default=substr(Sys.Date(), 1, 7), 
+              help="A year-month (YYYY-MM) combination indicating the end date for data download. Defaults to the current date [Default= %default]", 
+              metavar="character"),
+  make_option(c("-p", "--province"), type="character", default='BC', 
+              help="Two-letter abbreviation for the province for which data should be gathered. Defaults to BC. It is highly recommended to choose a single province, otherwise the data volume is huge. The metadata for all stations Canada is always downloaded by default, separately from the provincial metadata table  [Default= %default]", 
+              metavar="character")
+  
+)
+
+# Parse any provided options and store them in a list
+opt_parser = OptionParser(option_list=option_list)
+opt = parse_args(opt_parser)
 
 # ==== User variables ====
 
+# Reading filepaths from JSON
+fpaths <- fromJSON(file = 'options/filepaths.json')
+
 # Path to batch file for running download
-bat_path <- 'scripts/_temp_download_ec_climdata.bat'
+bat_path <- ifelse(.Platform$OS.type == 'unix', 
+                   'scripts/_temp_download_ec_climdata.sh',
+                   'scripts/_temp_download_ec_climdata.bat')
 
 # Path to folder that will store downloaded data - creating it if doesn't exist,
 # and overwriting if it does to store the new archive download
-download_path <- 'data/base_download'
+download_path <- fpaths$base_download
 if (!dir.exists(download_path)) {
   dir.create(download_path)
 }else{
@@ -30,13 +51,13 @@ if (!dir.exists(download_path)) {
 }
 
 # Path to archive
-archive_path <- 'data/archive'
-if (!dir.exists(download_path)) dir.create(download_path)
+archive_path <- fpaths$download_archive
+if (!dir.exists(archive_path)) dir.create(archive_path)
 
 # ==== Download parameters ====
 
-# End date - to get all historical data until today
-end_date <- substr(Sys.Date(), 1, 7)
+# End date to get all historical data until
+end_date <- opt$enddate
 
 # Indexing vector for provinces
 provinces <- c('NL', 'PE', 'NS', 'NB', 'QC', 'ON', 'MB',
@@ -46,11 +67,12 @@ provinces <- c('NL', 'PE', 'NS', 'NB', 'QC', 'ON', 'MB',
              'MANITOBA', 'SASKATCHEWAN', 'ALBERTA',
              'BRITISH COLUMBIA', 'YUKON TERRITORY', 'NORTHWEST TERRITORIES',
              'NUNAVUT'))
-# Province for which to download data - currently set to BC
-province <- provinces[10]
-# province <- 'BC'
+
+# Province for which to download data
+province <- provinces[provinces == opt$province]
 
 # ==== Downloading the most recent station list ====
+print("Downloading EC Station metadata tables...")
 station_list <- read_csv(
   'https://drive.google.com/uc?export=download&id=1HDRnj41YBWpMioLPwAFiLlK4SK8NV72C',
   skip = 3,
@@ -72,40 +94,73 @@ unlink(download_path, recursive = T)
 dir.create(download_path)
 
 # Creating batch file for calling the download script
-sink(bat_path)
-cat(':: Calling the activation script to run conda')
-cat('\n')
-cat('call C:\\Users\\OWNER\\miniconda3\\Scripts\\activate.bat')
-cat('\n')
-cat('\n')
-cat(':: Activating the GW environment')
-cat('\n')
-cat('call conda activate gwenv')
-cat('\n')
-cat('\n')
-cat(':: Navigating to the script home directory')
-cat('\n')
-cat('e:')
-cat('\n')
-cat(paste('cd', normalizePath(file.path(getwd(), 'scripts'))))
-cat('\n')
-cat('\n')
-cat(':: Calling the script to download weather data (hourly and daily) for all BC stations')
-cat('\n')
-cat(paste0('python get_canadian_weather_observations.py ', 
-           '--hourly --daily ',
-           ifelse(!is.null(end_date), paste0('--end-date "', end_date, '" '), ''),
-           # '--station-file "E:\\saeeshProjects\\ec-climate-database\\data\\station_list_CA.csv" ',
-           '-o "', normalizePath(download_path), '" ',
-           province
-))
-cat('\n')
-cat('\n')
-cat('pause')
-sink()
+if(.Platform$OS.type == 'unix'){
+  sink(bat_path)
+  cat('#!/bin/sh')
+  cat('\n')
+  cat('\n')
+  cat('# Activating conda environment')
+  cat('\n')
+  cat(paste('source', fpaths$conda_path))
+  cat('\n')
+  cat(paste('conda activate', fpaths$conda_env))
+  cat('\n')
+  cat('\n')
+  cat('# Navigating to the script home directory')
+  cat('\n')
+  cat(paste('cd', normalizePath(file.path(getwd(), 'scripts'))))
+  cat('\n')
+  cat('\n')
+  cat('# Calling the script to download weather data (hourly and daily) for all BC stations')
+  cat('\n')
+  cat(paste0('python get_canadian_weather_observations.py ', 
+             '--hourly --daily ',
+             ifelse(!is.null(end_date), paste0('--end-date "', end_date, '" '), ''),
+             # '--station-file "E:\\saeeshProjects\\ec-climate-database\\data\\station_list_CA.csv" ',
+             '-o "', normalizePath(download_path), '" ',
+             province
+  ))
+  cat('\n')
+  cat('\n')
+  sink()
+}else{
+  sink(bat_path)
+  cat(':: Calling the activation script to run conda')
+  cat('\n')
+  cat(paste('call', fpaths$conda_path))
+  cat('\n')
+  cat('\n')
+  cat(':: Activating the GW environment')
+  cat('\n')
+  cat(paste('call conda activate', fpaths$conda_env))
+  cat('\n')
+  cat('\n')
+  cat(':: Navigating to the script home directory')
+  cat('\n')
+  cat('\n')
+  cat(paste('cd /d', normalizePath(file.path(getwd(), 'scripts'))))
+  cat('\n')
+  cat('\n')
+  cat(':: Calling the script to download weather data (hourly and daily) for all BC stations')
+  cat('\n')
+  cat(paste0('python get_canadian_weather_observations.py ', 
+             '--hourly --daily ',
+             ifelse(!is.null(end_date), paste0('--end-date "', end_date, '" '), ''),
+             # '--station-file "E:\\saeeshProjects\\ec-climate-database\\data\\station_list_CA.csv" ',
+             '-o "', normalizePath(download_path), '" ',
+             province
+  ))
+  cat('\n')
+  cat('\n')
+  sink()
+}
 
 # ==== Executing the batch file ====
-system(normalizePath(bat_path))
+if(.Platform$OS.type == 'unix'){
+  system(paste('sh', normalizePath(bat_path)))
+}else{
+  system(normalizePath(bat_path))
+}
 
 # ==== Adding download to the archive ====
 

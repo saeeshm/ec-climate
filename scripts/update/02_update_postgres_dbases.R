@@ -16,11 +16,17 @@ library(DBI)
 
 # ==== Initializing global variables ====
 
+# Reading filepaths from JSON
+fpaths <- fromJSON(file = 'options/filepaths.json')
+
 # Path to recent downloaded data 
-download_path <- 'data/download'
+download_path <- fpaths$update_download
+
+# Path to where the update report will be stored
+report_path <- fpaths$update_report_path
 
 # Reading creditials specified by user
-creds <- fromJSON(file = 'credentials.json')
+creds <- fromJSON(file = 'options/credentials.json')
 
 # Opening connection to postgres database
 conn <- dbConnect(drv = RPostgres::Postgres(), 
@@ -33,7 +39,7 @@ dnames <- list.files(download_path, full.names = T) %>%
   setNames(list.files(download_path))
 
 # ==== Station list ====
-
+print('Updating station metdata file...')
 # Reading the BC stations list (downloaded from the previous script)
 station_list <- read_csv('data/station_list_BC.csv')
 
@@ -43,8 +49,9 @@ dbWriteTable(conn,
              station_list,
              append = F,
              overwrite = T)
-# ==== Daily data ====
 
+# ==== Daily data ====
+print('Updating daily data...')
 # Getting filenames for all daily data for each station
 fnames <- map(dnames, ~{
   list.files(paste0(.x, '/daily'), full.names = T)
@@ -116,10 +123,11 @@ dbWriteTable(conn,
              overwrite = F)
 
 # Cleaning
-rm(list = ls()[!ls() %in% c('conn', 'creds', 'dnames', 'download_path')])
+rm(list = ls()[!ls() %in% c('conn', 'creds', 'dnames', 'download_path', 'report_path')])
 gc()
 
 # ==== Hourly ====
+print('Updating hourly data...')
 
 # Getting filenames for all hourly data for each station
 fnames <- map(dnames, ~{
@@ -198,3 +206,15 @@ dbWriteTable(conn,
 
 # Closing connection
 dbDisconnect(conn)
+
+# ==== Updating logs ====
+print('Writing update report...')
+
+# Updating the current status text file
+curr_time <- Sys.time()
+sink(report_path, append = F)
+cat("EC Climate database update status:\n")
+cat("\n")
+cat("Date of last Climate database update:", as.character(curr_time), "\n")
+sink()
+

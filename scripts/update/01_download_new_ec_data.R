@@ -16,12 +16,16 @@ library(optparse)
 
 # ==== Initializing option parsing ====
 option_list <-  list(
-  make_option(c("-s", "--startdate"), type="character", default='2022-04', 
-              help="A year month combination indicating the start date for data download. Defaults to the date where the historical archive download ends [Default= %default]", 
+  make_option(c("-s", "--startdate"), type="character", default=substr(Sys.Date()-31, 1, 7), 
+              help="A year month combination indicating the start date for data download. Defaults to 31 days before today [Default= %default]", 
               metavar="character"),
-  make_option(c("-s", "--enddate"), type="character", default=substr(Sys.Date(), 1, 7), 
-              help="A year month combination indicating the start date for data download. Defaults to the current date [Default= %default]", 
+  make_option(c("-e", "--enddate"), type="character", default=substr(Sys.Date(), 1, 7), 
+              help="A year month combination indicating the end date for data download. Defaults to the current date [Default= %default]", 
+              metavar="character"),
+  make_option(c("-p", "--province"), type="character", default='BC', 
+              help="Two-letter abbreviation for the province for which data should be gathered. Defaults to BC. It is highly recommended to choose a single province, otherwise the data volume is huge. The metadata for all stations Canada is always downloaded by default, separately from the provincial metadata table  [Default= %default]", 
               metavar="character")
+  
   )
 
 # Parse any provided options and store them in a list
@@ -30,17 +34,20 @@ opt = parse_args(opt_parser)
 
 # ==== User variables ====
 
+# Reading filepaths from JSON
+fpaths <- fromJSON(file = 'options/filepaths.json')
+
 # Path to batch file for running download
 bat_path <- ifelse(.Platform$OS.type == 'unix', 
                    'scripts/_temp_download_ec_climdata.sh',
                    'scripts/_temp_download_ec_climdata.bat')
 
 # Path to folder that will store downloaded data
-download_path <- 'data/download'
+download_path <- fpaths$update_download
 if (!dir.exists(download_path)) dir.create(download_path)
 
 # Path to archive
-archive_path <- 'data/archive'
+archive_path <- fpaths$download_archive
 if (!dir.exists(archive_path)) dir.create(archive_path)
 
 # ==== Download parameters ====
@@ -58,21 +65,22 @@ provinces <- c('NL', 'PE', 'NS', 'NB', 'QC', 'ON', 'MB',
              'BRITISH COLUMBIA', 'YUKON TERRITORY', 'NORTHWEST TERRITORIES',
              'NUNAVUT'))
 # Province for which to download data
-province <- provinces[10]
+province <- provinces[provinces == opt$province]
 
 # ==== Downloading the most recent station list ====
+print("Updating EC Station metadata table...")
 station_list <- read_csv(
   'https://drive.google.com/uc?export=download&id=1HDRnj41YBWpMioLPwAFiLlK4SK8NV72C',
   skip = 3,
   col_types = 'ccccccdddddiiiiiiii'
   )
 # Writing full station list to disk
-write_csv(station_list, 'data/station_list_CA.csv', append = F)
+write_csv(station_list, fpaths$stations_CA, append = F)
 
 # Filtering only for BC
 station_list <- station_list %>% filter(Province %in% names(province))
 # Writing to disk
-write_csv(station_list, 'data/station_list_BC.csv', append = F)
+write_csv(station_list, fpaths$stations_province, append = F)
 
 # ==== Initializing data download ====
 
@@ -88,9 +96,9 @@ if(.Platform$OS.type == 'unix'){
   cat('\n')
   cat('# Activating conda environment')
   cat('\n')
-  cat('source /Users/saeesh/opt/miniconda3/etc/profile.d/conda.sh')
+  cat(paste('source', fpaths$conda_path))
   cat('\n')
-  cat('conda activate gwenv')
+  cat(paste('conda activate', fpaths$conda_env))
   cat('\n')
   cat('\n')
   cat('# Navigating to the script home directory')
@@ -115,19 +123,19 @@ if(.Platform$OS.type == 'unix'){
   sink(bat_path)
   cat(':: Calling the activation script to run conda')
   cat('\n')
-  cat('call C:\\Users\\OWNER\\miniconda3\\Scripts\\activate.bat')
+  cat(paste('call', fpaths$conda_path))
   cat('\n')
   cat('\n')
   cat(':: Activating the GW environment')
   cat('\n')
-  cat('call conda activate gwenv')
+  cat(paste('call conda activate', fpaths$conda_env))
   cat('\n')
   cat('\n')
   cat(':: Navigating to the script home directory')
   cat('\n')
   cat('e:')
   cat('\n')
-  cat(paste('cd', normalizePath(file.path(getwd(), 'scripts'))))
+  cat(paste('cd /d', normalizePath(file.path(getwd(), 'scripts'))))
   cat('\n')
   cat('\n')
   cat(':: Calling the script to download weather data (hourly and daily) for all BC stations')
@@ -146,7 +154,11 @@ if(.Platform$OS.type == 'unix'){
 }
 
 # ==== Executing the batch file ====
-system(paste('sh', normalizePath(bat_path)))
+if(.Platform$OS.type == 'unix'){
+  system(paste('sh', normalizePath(bat_path)))
+}else{
+  system(normalizePath(bat_path))
+}
 
 # ==== Adding download to the archive ====
 
@@ -170,7 +182,7 @@ dates <- names(fnames) %>%
 fnames <- fnames[!(ymd(names(fnames)) %in% dates)]
 
 # Removing these files (if there are any to remove)
-if (length(fnames) > 0) file.remove(paste0(archive_path, fnames))
+if (length(fnames) > 0) unlink(file.path(archive_path, fnames), recursive = T)
 
 # Copying the current download to the archive
 file.copy(download_path, archive_path, recursive = T)

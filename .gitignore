@@ -8,4 +8,4 @@ archive/
 output/
 scripts/_temp_download_ec_climdata.sh
 scripts/_temp_download_ec_climdata.bat
-credentials.json
+options/credentials.json

@@ -11,8 +11,13 @@ library(stringr)
 library(dplyr)
 library(data.table)
 
+# ===== File paths =====
+
+# Reading filepaths from JSON
+fpaths <- fromJSON(file = 'options/filepaths.json')
+
 # Path to base data
-base_data_path <- 'data/base_download_formatted'
+base_data_path <-fpaths$base_dn_formatted
 
 # ==== Cleaning names and rewriting ====
 
@@ -61,3 +66,4 @@ walk(fnames, ~{
   # writing back to disk
   fwrite(dat, .x, na = NA)
 })
+

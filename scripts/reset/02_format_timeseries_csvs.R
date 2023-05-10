@@ -13,12 +13,15 @@ library(lubridate)
 
 # ==== Initializing global variables ====
 
+# Reading filepaths from JSON
+fpaths <- fromJSON(file = 'options/filepaths.json')
+
 # Path to downloaded data 
-download_path <- 'data/base_download'
+download_path <- fpaths$base_download
 if (!dir.exists(download_path)) dir.create(download_path)
 
 # Path to output directory
-out_path <- 'data/base_download_formatted'
+out_path <- fpaths$base_dn_formatted
 if (!dir.exists(out_path)) dir.create(out_path)
 
 # Creating container directories if not present
@@ -128,14 +131,14 @@ for (i in 1:length(thresholds)) {
   # Cleaning some problematic columns
   
   # Writing to csv, indicating the date-range covered
-  write_csv(daily, paste0(out_path, '/daily/daily_climData_BC_', 
+  write_csv(daily, paste0(out_path, '/daily/daily_climData_', 
                           names(thresholds[i + 1]),'-', names(thresholds[i]),
                           '.csv'))
 }
 
 # Clearing objects
 rm(list = ls()[!ls() %in% c('download_path', 'out_path', 'dnames')])
-
+gc()
 
 # ==== Hourly data ====
 
@@ -232,7 +235,7 @@ for (i in 1:length(thresholds)) {
     select(sort(tidyselect::peek_vars()))
   
   # Writing to csv, indicating the date-range covered
-  write_csv(hourly, paste0(out_path, '/hourly/hourly_climData_BC_', 
+  write_csv(hourly, paste0(out_path, '/hourly/hourly_climData_', 
                           names(thresholds[i + 1]),'-', names(thresholds[i]),
                           '.csv'))
 }

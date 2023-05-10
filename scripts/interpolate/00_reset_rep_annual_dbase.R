@@ -21,13 +21,14 @@ library(RPostgres)
 # Metadata file
 stations <- read_csv('data/station_list_BC.csv')
 
-# Connecting to database
-conn <- dbConnect(drv = RPostgres::Postgres(),
-                  dbname = 'gws',
-                  host = '10.0.1.83',
-                  port = '5432',
-                  user = 'matt', 
-                  password = 'Gws2005')
+# Reading creditials specified by user
+creds <- fromJSON(file = 'options/credentials.json')
+
+# Opening connection to postgres database
+conn <- dbConnect(drv = RPostgres::Postgres(), 
+                  host = creds$host, dbname = creds$dbname, 
+                  user = creds$user, password = creds$password)
+
 
 # ==== Database of representative annual (daily) data by station ====
 

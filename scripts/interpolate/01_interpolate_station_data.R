@@ -31,13 +31,13 @@ out_path <- 'output/interpolation'
 
 # ==== Completing heavy, one-time operations ====
 
-# Connecting to database
-conn <- dbConnect(drv = RPostgres::Postgres(),
-                  dbname = 'gws',
-                  host = '10.0.1.83',
-                  port = '5432',
-                  user = 'matt', 
-                  password = 'Gws2005')
+# Reading creditials specified by user
+creds <- fromJSON(file = 'options/credentials.json')
+
+# Opening connection to postgres database
+conn <- dbConnect(drv = RPostgres::Postgres(), 
+                  host = creds$host, dbname = creds$dbname, 
+                  user = creds$user, password = creds$password)
 
 # Getting the representative year table from postgres
 rep_year_db <- dbGetQuery(conn, 'select * from climate.precip_representative_year') %>% 

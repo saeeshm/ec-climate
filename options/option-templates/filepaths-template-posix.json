@@ -1,0 +1,11 @@
+{
+    "base_download": "data/base_download",
+    "base_dn_formatted": "data/base_download_formatted",
+    "update_download": "data/download",
+    "download_archive": "data/archive",
+    "update_report_path": "ecclim-update-report.txt",
+    "stations_CA": "data/station_list_CA.csv",
+    "stations_province": "data/station_list_BC.csv",
+    "conda_path": "C:\\Users\\OWNER\\miniconda3\\Scripts\\activate.bat",
+    "conda_env": "myenv"
+}

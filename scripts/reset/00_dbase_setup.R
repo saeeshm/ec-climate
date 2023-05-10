@@ -14,7 +14,7 @@ library(rjson)
 # ==== Resetting database containers ====
 
 # Reading credentials specified by user
-creds <- fromJSON(file = 'credentials.json')
+creds <- fromJSON(file = 'options/credentials.json')
 
 print('Opening database connection...')
 conn <- dbConnect(drv = RPostgres::Postgres(), 

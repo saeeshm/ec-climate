@@ -19,19 +19,38 @@ library(purrr)
 library(dplyr)
 library(data.table)
 library(rjson)
+library(optparse)
+library(lubridate)
+
+# ==== Initializing option parsing ====
+option_list <-  list(
+  make_option(c("-m", "--maxdate"), type="character", default=as.character(Sys.Date()), 
+              help="A year-month (YYYY-MM) combination indicating the maximum date upto which data has been downloaded through this database initialization. Defaults to the current date [Default= %default]", 
+              metavar="character")
+)
+
+# Parse any provided options and store them in a list
+opt_parser = OptionParser(option_list=option_list)
+opt = parse_args(opt_parser)
 
 # ==== Initializing variables ====
 
-# Reading creditials specified by user
-creds <- fromJSON(file = 'credentials.json')
+# Reading filepaths from JSON
+fpaths <- fromJSON(file = 'options/filepaths.json')
 
-# Opening connection to postgres database
+# Reading creditials specified by user
+creds <- fromJSON(file = 'options/credentials.json')
+
+# Path to base historical data
+base_data_path <- fpaths$base_dn_formatted
+
+# ===== Opening posgres connection =====
+
 conn <- dbConnect(drv = RPostgres::Postgres(), 
                   host = creds$host, dbname = creds$dbname, 
                   user = creds$user, password = creds$password)
 
-# Path to base historical data
-base_data_path <- 'data/base_download_formatted'
+
 
 # ==== Creating database containers ====
 
@@ -176,10 +195,11 @@ walk(fnames, ~{
 # dropped to ensure that complete data is updated on top of this script
 dbExecute(conn, paste0(
   'delete from ', creds$schema, '.daily \n',
-  'where datetime > \'2021-08-31\' '
+  'where datetime > \'', opt$maxdate, '\' '
 ))
 
 dbExecute(conn, paste0(
   'delete from ', creds$schema, '.hourly \n',
-  'where year >= 2021 and month > 8 '
+  'where year >= ', year(opt$maxdate), 
+  ' and month > ', month(opt$maxdate)
 ))
