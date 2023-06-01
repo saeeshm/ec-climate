@@ -60,19 +60,14 @@ fnames <- map(dnames, ~{
 # Removing stations where there is no new daily data
 fnames <- fnames[map_lgl(fnames, ~{length(.x) > 0})]
 
-# Reading all data tables
-daily_tables <- map_depth(fnames, 2,  ~{
-  read_csv(.x, col_types = cols(.default = "c"))
-})
-
-# Joining individual tables for each station into a single dataframe per
-# station
-daily_joined <- map(daily_tables, ~{
-  map_dfr(.x, invisible)
+# Reading all tables, and joining the ones for each station into a single
+# dataframe
+daily_tables <- map(fnames, ~{
+  map_dfr(.x, read_csv, col_types = cols(.default = "c"))
 })
 
 # Adding an identifier column using the station name
-daily_joined <- imap(daily_joined, ~{
+daily_joined <- imap(daily_tables, ~{
   .x <- mutate(.x, EC_Station_ID = .y)
 })
 
@@ -137,19 +132,14 @@ fnames <- map(dnames, ~{
 # Removing stations where there is no new hourly data
 fnames <- fnames[map_lgl(fnames, ~{length(.x) > 0})]
 
-# Reading data for all stations within this data range
-hourly_tables <- map_depth(fnames, 2,  ~{
-  suppressWarnings(read_csv(.x, col_types = cols(.default = "c")))
-})
-
-# Joining individual tables for each station into a single dataframe per
-# station
-hourly_joined <- map(hourly_tables, ~{
-  map_dfr(.x, invisible)
+# Reading all tables, and joining the ones for each station into a single
+# dataframe
+hourly_tables <- map(fnames,  ~{
+  map_dfr(.x, read_csv, col_types = cols(.default = "c"))
 })
 
 # Adding an identifier column using the station name
-hourly_joined <- imap(hourly_joined, ~{
+hourly_joined <- imap(hourly_tables, ~{
   .x <- mutate(.x, EC_Station_ID = .y)
 })
 

@@ -82,7 +82,8 @@ station_list <- station_list %>% filter(Province %in% names(province))
 # Writing to disk
 write_csv(station_list, fpaths$stations_province, append = F)
 
-# ==== Initializing data download ====
+# ==== Initializing data download ==== 
+print('Generating script for data download...')
 
 # Clearing the download folder of any data if present
 unlink(download_path, recursive = T)
@@ -90,7 +91,7 @@ dir.create(download_path)
 
 # Creating batch file for calling the download script
 if(.Platform$OS.type == 'unix'){
-  sink(bat_path)
+  sink(file=bat_path, type="output")
   cat('#!/bin/sh')
   cat('\n')
   cat('\n')
@@ -120,7 +121,7 @@ if(.Platform$OS.type == 'unix'){
   cat('\n')
   sink()
 }else{
-  sink(bat_path)
+  sink(file=bat_path, type="output")
   cat(':: Calling the activation script to run conda')
   cat('\n')
   cat(paste('call', fpaths$conda_path))
@@ -153,7 +154,11 @@ if(.Platform$OS.type == 'unix'){
   sink()
 }
 
+# Pausing for a few seconds to let the file generate
+# Sys.sleep(5)
+
 # ==== Executing the batch file ====
+print('Initiating data download...')
 if(.Platform$OS.type == 'unix'){
   system(paste('sh', normalizePath(bat_path)))
 }else{
@@ -161,6 +166,7 @@ if(.Platform$OS.type == 'unix'){
 }
 
 # ==== Adding download to the archive ====
+print('Adding download to the archive...')
 
 # Creating the archive folder if needed
 if (!dir.exists(archive_path)) dir.create(archive_path)
@@ -185,10 +191,13 @@ fnames <- fnames[!(ymd(names(fnames)) %in% dates)]
 if (length(fnames) > 0) unlink(file.path(archive_path, fnames), recursive = T)
 
 # Copying the current download to the archive
-file.copy(download_path, archive_path, recursive = T)
-file.rename(file.path(archive_path, 'download'), 
-            file.path(archive_path, paste0('download_', Sys.Date())))
+archive_copy_path <- file.path(archive_path, paste0('download_', Sys.Date()))
+dir.create(archive_copy_path)
+file.copy(list.files(download_path, full.names=T), 
+          archive_copy_path, 
+          recursive = T)
 
+print('Closing. New data download complete.')
 # Removing the batch file
 file.remove(normalizePath(bat_path))
 

@@ -1,5 +1,5 @@
 :: Navigating to project directory
-cd /d E:\saeeshProjects\databases\ec-climate
+:: cd /d E:\saeeshProjects\databases\ec-climate
 
 :: Calling script for downloading new data
 Rscript scripts\update\01_download_new_ec_data.R
