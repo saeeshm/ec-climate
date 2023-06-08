@@ -1,5 +1,5 @@
 :: Navigating to project directory
-cd /d E:\saeeshProjects\databases\ec-climate
+:: cd /d E:\saeeshProjects\databases\ec-climate
 
 :: Setting up the postgres database
 Rscript scripts\reset\00_dbase_setup.R
