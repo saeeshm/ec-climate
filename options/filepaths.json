@@ -6,6 +6,6 @@
     "update_report_path": "ecclim-update-report.txt",
     "stations_CA": "data/station_list_CA.csv",
     "stations_province": "data/station_list_BC.csv",
-    "conda_path": "~/opt/miniconda3/etc/profile.d/conda.sh",
+    "conda_path": "C:\\Users\\OWNER\\miniconda3\\Scripts\\activate.bat",
     "conda_env": "gwenv"
 }

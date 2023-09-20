@@ -167,7 +167,7 @@ names(hourly) <- short_names
 hourly <- hourly %>% filter(datetime < Sys.Date())
 
 # Getting the date range covered by the new data
-dateRange <- range(ymd_hms(hourly$datetime))
+dateRange <- range(as_datetime(hourly$datetime))
 
 # Getting any data covering the same date range that is already in the database
 curr_data <- dbGetQuery(conn, 
